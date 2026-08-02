@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fondo espacial animado</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; margin: 0; overflow: hidden;
+      background:
+        radial-gradient(circle at 68% 28%, rgba(14, 50, 112, 0.22), transparent 38%),
+        radial-gradient(circle at 18% 76%, rgba(10, 38, 92, 0.14), transparent 42%),
+        linear-gradient(135deg, #00030a 0%, #020817 52%, #00040d 100%);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .indice {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: stretch;
+      padding: clamp(34px, 5vw, 72px) clamp(34px, 6vw, 110px);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .titulo-indice {
+      margin: 0 0 34px;
+      text-align: center;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: clamp(30px, 3.2vw, 54px);
+      font-weight: 300;
+      line-height: 1.15;
+      letter-spacing: 0.08em;
+      color: #205f89;
+      text-shadow:
+        0 0 8px rgba(32, 95, 137, 0.36),
+        0 0 22px rgba(18, 57, 104, 0.24);
+    }
+
+    .titulo-indice .letra,
+    .listo .letra {
+      display: inline-block;
+      opacity: 0;
+      color: var(--color-base, #205f89);
+      text-shadow:
+        0 0 7px rgba(32, 95, 137, 0.34),
+        0 0 18px rgba(18, 57, 104, 0.22);
+      animation:
+        aparecerLetra 0.45s ease forwards,
+        brilloLetra 6.8s ease-in-out infinite;
+      animation-delay:
+        var(--retraso),
+        calc(var(--retraso) + 0.6s);
+    }
+
+    .titulo-indice .espacio,
+    .listo .espacio {
+      width: 0.34em;
+    }
+
+    .modulos {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(18px, 2.2vw, 30px);
+      width: 100%;
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+
+    .modulo {
+      position: relative;
+      min-height: clamp(155px, 18vh, 205px);
+      padding: clamp(20px, 2.1vw, 30px);
+      border: 1px solid rgba(63, 151, 209, 0.34);
+      background:
+        linear-gradient(
+          135deg,
+          rgba(9, 29, 70, 0.44),
+          rgba(5, 16, 42, 0.24)
+        );
+      box-shadow:
+        inset 0 0 24px rgba(32, 95, 137, 0.08),
+        0 0 22px rgba(22, 72, 136, 0.08);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      transform: translateY(16px);
+      animation: aparecerModulo 0.75s ease forwards;
+      animation-delay: var(--demora);
+      overflow: hidden;
+    }
+
+    .modulo::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 68%;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        rgba(82, 194, 244, 0.88),
+        rgba(82, 194, 244, 0)
+      );
+    }
+
+    .modulo::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 42%;
+      height: 1px;
+      background: linear-gradient(
+        270deg,
+        rgba(82, 194, 244, 0.68),
+        rgba(82, 194, 244, 0)
+      );
+    }
+
+    .cabecera-modulo {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .numero {
+      flex: 0 0 auto;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: clamp(26px, 2.4vw, 42px);
+      font-weight: 300;
+      letter-spacing: 0.10em;
+      color: rgba(83, 181, 232, 0.92);
+      text-shadow:
+        0 0 12px rgba(56, 189, 248, 0.30),
+        0 0 24px rgba(30, 95, 170, 0.20);
+    }
+
+    .nombre-modulo {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: clamp(18px, 1.7vw, 28px);
+      font-weight: 300;
+      line-height: 1.2;
+      letter-spacing: 0.04em;
+      color: rgba(215, 236, 250, 0.96);
+      text-shadow: 0 0 12px rgba(48, 132, 190, 0.20);
+    }
+
+    .descripcion-modulo {
+      margin: 0;
+      padding-left: 64px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: clamp(13px, 1.05vw, 17px);
+      font-weight: 300;
+      line-height: 1.55;
+      letter-spacing: 0.018em;
+      color: rgba(183, 207, 227, 0.82);
+    }
+
+    .linea-modulo {
+      position: absolute;
+      left: clamp(20px, 2.1vw, 30px);
+      bottom: 16px;
+      width: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        rgba(76, 190, 242, 0.84),
+        rgba(76, 190, 242, 0)
+      );
+      animation: extenderLinea 0.95s ease forwards;
+      animation-delay: calc(var(--demora) + 0.26s);
+    }
+
+    .listo {
+      align-self: flex-end;
+      margin: clamp(20px, 2.4vw, 34px) max(0px, calc((100vw - 1320px) / 2)) 0 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: clamp(22px, 2.2vw, 36px);
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      color: #205f89;
+      text-shadow:
+        0 0 8px rgba(32, 95, 137, 0.36),
+        0 0 22px rgba(18, 57, 104, 0.24);
+    }
+
+    @keyframes aparecerLetra {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes brilloLetra {
+      0%,
+      38%,
+      62%,
+      100% {
+        color: #205f89;
+        text-shadow:
+          0 0 7px rgba(32, 95, 137, 0.34),
+          0 0 18px rgba(18, 57, 104, 0.22);
+      }
+
+      50% {
+        color: #72cdf3;
+        text-shadow:
+          0 0 13px rgba(114, 205, 243, 0.68),
+          0 0 28px rgba(56, 189, 248, 0.44),
+          0 0 40px rgba(37, 99, 235, 0.22);
+      }
+    }
+
+    @keyframes aparecerModulo {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes extenderLinea {
+      from {
+        width: 0;
+      }
+      to {
+        width: 58%;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .indice {
+        justify-content: flex-start;
+        overflow-y: auto;
+        padding: 28px 22px 40px;
+      }
+
+      .titulo-indice {
+        margin-bottom: 24px;
+        font-size: clamp(27px, 7vw, 42px);
+      }
+
+      .modulos {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .modulo {
+        min-height: 148px;
+      }
+
+      .descripcion-modulo {
+        padding-left: 0;
+      }
+
+      .listo {
+        align-self: flex-end;
+        margin: 22px 4px 0 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="espacio"></canvas>
+
+  <section class="indice" aria-label="Índice de módulos">
+    <h1 id="tituloIndice" class="titulo-indice" aria-label="Cálculo Modular I"></h1>
+
+    <div class="modulos">
+      <article class="modulo" style="--demora: 2.6s;">
+        <div class="cabecera-modulo">
+          <div class="numero">01</div>
+          <div class="nombre-modulo">Matemática básica</div>
+        </div>
+        <p class="descripcion-modulo">
+          Introducción a las bases matemáticas, las operaciones fundamentales
+          y los conceptos esenciales que sustentan el aprendizaje posterior.
+        </p>
+        <div class="linea-modulo"></div>
+      </article>
+
+      <article class="modulo" style="--demora: 3.05s;">
+        <div class="cabecera-modulo">
+          <div class="numero">02</div>
+          <div class="nombre-modulo">Precálculo</div>
+        </div>
+        <p class="descripcion-modulo">
+          Estudio de los fundamentos matemáticos del cálculo mediante funciones,
+          relaciones algebraicas, geometría analítica y trigonometría.
+        </p>
+        <div class="linea-modulo"></div>
+      </article>
+
+      <article class="modulo" style="--demora: 3.50s;">
+        <div class="cabecera-modulo">
+          <div class="numero">03</div>
+          <div class="nombre-modulo">Cálculo diferencial</div>
+        </div>
+        <p class="descripcion-modulo">
+          Estudio de la derivada para analizar razones de cambio, modelar
+          variaciones y optimizar procesos en distintos contextos.
+        </p>
+        <div class="linea-modulo"></div>
+      </article>
+
+      <article class="modulo" style="--demora: 3.95s;">
+        <div class="cabecera-modulo">
+          <div class="numero">04</div>
+          <div class="nombre-modulo">Introducción al cálculo integral</div>
+        </div>
+        <p class="descripcion-modulo">
+          Estudio básico de integrales y de sus aplicaciones en el cálculo
+          de áreas, volúmenes y acumulaciones.
+        </p>
+        <div class="linea-modulo"></div>
+      </article>
+    </div>
+
+    <div id="textoListo" class="listo" aria-label="¿Listo?"></div>
+  </section>
+
+  <script>
+    const canvas = document.getElementById("espacio");
+    const ctx = canvas.getContext("2d", { alpha: false });
+
+    const estado = {
+      ancho: 0, alto: 0, escala: 1,
+      estrellas: [], polvo: [], fugaces: [],
+      ultimoTiempo: 0, proximaFugaz: 0, semilla: 873421
+    };
+
+    function aleatorio() {
+      estado.semilla += 0x6D2B79F5;
+      let t = estado.semilla;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+
+    function ajustarCanvas() {
+      estado.escala = Math.min(window.devicePixelRatio || 1, 2);
+      estado.ancho = window.innerWidth;
+      estado.alto = window.innerHeight;
+      canvas.width = Math.floor(estado.ancho * estado.escala);
+      canvas.height = Math.floor(estado.alto * estado.escala);
+      canvas.style.width = `${estado.ancho}px`;
+      canvas.style.height = `${estado.alto}px`;
+      ctx.setTransform(estado.escala, 0, 0, estado.escala, 0, 0);
+      crearEscena();
+    }
+
+    function crearEscena() {
+      estado.estrellas = [];
+      estado.polvo = [];
+      const area = estado.ancho * estado.alto;
+      const cantidadEstrellas = Math.floor(area / 950);
+      const cantidadPolvo = Math.floor(area / 4800);
+
+      for (let i = 0; i < cantidadEstrellas; i++) {
+        const profundidad = aleatorio();
+        estado.estrellas.push({
+          x: aleatorio() * estado.ancho,
+          y: aleatorio() * estado.alto,
+          radio: 0.25 + profundidad * 1.35,
+          alfaBase: 0.22 + aleatorio() * 0.68,
+          velocidad: 0.15 + profundidad * 0.55,
+          fase: aleatorio() * Math.PI * 2,
+          frecuencia: 0.25 + aleatorio() * 0.75,
+          tono: aleatorio()
+        });
+      }
+
+      for (let i = 0; i < cantidadPolvo; i++) {
+        estado.polvo.push({
+          x: aleatorio() * estado.ancho,
+          y: aleatorio() * estado.alto,
+          radio: 0.3 + aleatorio() * 0.65,
+          alfa: 0.04 + aleatorio() * 0.12,
+          velocidad: 0.04 + aleatorio() * 0.12
+        });
+      }
+    }
+
+    function colorEstrella(tono, alfa) {
+      if (tono < 0.76) return `rgba(214, 228, 255, ${alfa})`;
+      if (tono < 0.93) return `rgba(120, 176, 255, ${alfa})`;
+      return `rgba(255, 218, 170, ${alfa})`;
+    }
+
+    function dibujarFondo() {
+      const gradiente = ctx.createLinearGradient(0, 0, estado.ancho, estado.alto);
+      gradiente.addColorStop(0, "#00030a");
+      gradiente.addColorStop(0.48, "#020817");
+      gradiente.addColorStop(1, "#00040d");
+      ctx.fillStyle = gradiente;
+      ctx.fillRect(0, 0, estado.ancho, estado.alto);
+
+      const haloPrincipal = ctx.createRadialGradient(
+        estado.ancho * 0.68, estado.alto * 0.28, 0,
+        estado.ancho * 0.68, estado.alto * 0.28,
+        Math.max(estado.ancho, estado.alto) * 0.42
+      );
+      haloPrincipal.addColorStop(0, "rgba(18, 66, 145, 0.18)");
+      haloPrincipal.addColorStop(0.38, "rgba(10, 41, 102, 0.08)");
+      haloPrincipal.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = haloPrincipal;
+      ctx.fillRect(0, 0, estado.ancho, estado.alto);
+
+      const haloSecundario = ctx.createRadialGradient(
+        estado.ancho * 0.18, estado.alto * 0.76, 0,
+        estado.ancho * 0.18, estado.alto * 0.76,
+        Math.max(estado.ancho, estado.alto) * 0.36
+      );
+      haloSecundario.addColorStop(0, "rgba(16, 55, 125, 0.10)");
+      haloSecundario.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = haloSecundario;
+      ctx.fillRect(0, 0, estado.ancho, estado.alto);
+    }
+
+    function dibujarNebulosas(tiempo) {
+      const desplazamiento = Math.sin(tiempo * 0.00005) * 18;
+
+      const nebulosa1 = ctx.createRadialGradient(
+        estado.ancho * 0.64 + desplazamiento, estado.alto * 0.30, 0,
+        estado.ancho * 0.64 + desplazamiento, estado.alto * 0.30,
+        Math.max(estado.ancho, estado.alto) * 0.30
+      );
+      nebulosa1.addColorStop(0, "rgba(35, 104, 210, 0.11)");
+      nebulosa1.addColorStop(0.42, "rgba(18, 67, 155, 0.05)");
+      nebulosa1.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = nebulosa1;
+      ctx.fillRect(0, 0, estado.ancho, estado.alto);
+
+      const nebulosa2 = ctx.createRadialGradient(
+        estado.ancho * 0.28 - desplazamiento * 0.5, estado.alto * 0.72, 0,
+        estado.ancho * 0.28 - desplazamiento * 0.5, estado.alto * 0.72,
+        Math.max(estado.ancho, estado.alto) * 0.24
+      );
+      nebulosa2.addColorStop(0, "rgba(20, 71, 165, 0.075)");
+      nebulosa2.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = nebulosa2;
+      ctx.fillRect(0, 0, estado.ancho, estado.alto);
+    }
+
+    function actualizarYdibujarPolvo(delta) {
+      for (const punto of estado.polvo) {
+        punto.x -= punto.velocidad * delta * 0.01;
+        if (punto.x < -2) {
+          punto.x = estado.ancho + 2;
+          punto.y = aleatorio() * estado.alto;
+        }
+        ctx.fillStyle = `rgba(110, 155, 220, ${punto.alfa})`;
+        ctx.fillRect(punto.x, punto.y, punto.radio, punto.radio);
+      }
+    }
+
+    function actualizarYdibujarEstrellas(tiempo, delta) {
+      for (const estrella of estado.estrellas) {
+        estrella.x -= estrella.velocidad * delta * 0.01;
+        if (estrella.x < -4) {
+          estrella.x = estado.ancho + 4;
+          estrella.y = aleatorio() * estado.alto;
+        }
+
+        const pulso = 0.72 + Math.sin(tiempo * 0.001 * estrella.frecuencia + estrella.fase) * 0.28;
+        const alfa = estrella.alfaBase * pulso;
+
+        ctx.beginPath();
+        ctx.arc(estrella.x, estrella.y, estrella.radio, 0, Math.PI * 2);
+        ctx.fillStyle = colorEstrella(estrella.tono, alfa);
+        ctx.fill();
+
+        if (estrella.radio > 1.15 && alfa > 0.58) {
+          const brillo = ctx.createRadialGradient(
+            estrella.x, estrella.y, 0,
+            estrella.x, estrella.y, estrella.radio * 5
+          );
+          brillo.addColorStop(0, colorEstrella(estrella.tono, alfa * 0.45));
+          brillo.addColorStop(1, "rgba(0, 0, 0, 0)");
+          ctx.fillStyle = brillo;
+          ctx.fillRect(
+            estrella.x - estrella.radio * 5,
+            estrella.y - estrella.radio * 5,
+            estrella.radio * 10,
+            estrella.radio * 10
+          );
+        }
+      }
+    }
+
+    function crearEstrellaFugaz() {
+      const desdeIzquierda = aleatorio() > 0.5;
+      estado.fugaces.push({
+        x: desdeIzquierda ? -120 : estado.ancho + 120,
+        y: aleatorio() * estado.alto * 0.55,
+        vx: desdeIzquierda ? 0.65 + aleatorio() * 0.3 : -(0.65 + aleatorio() * 0.3),
+        vy: 0.24 + aleatorio() * 0.18,
+        vida: 0,
+        duracion: 850 + aleatorio() * 450,
+        largo: 110 + aleatorio() * 90
+      });
+    }
+
+    function actualizarYdibujarFugaces(tiempo, delta) {
+      if (tiempo >= estado.proximaFugaz) {
+        crearEstrellaFugaz();
+        estado.proximaFugaz = tiempo + 14000 + aleatorio() * 9000;
+      }
+
+      estado.fugaces = estado.fugaces.filter((fugaz) => {
+        fugaz.vida += delta;
+        fugaz.x += fugaz.vx * delta;
+        fugaz.y += fugaz.vy * delta;
+
+        const progreso = fugaz.vida / fugaz.duracion;
+        const alfa = Math.sin(Math.min(progreso, 1) * Math.PI);
+        const magnitud = Math.hypot(fugaz.vx, fugaz.vy);
+        const ux = fugaz.vx / magnitud;
+        const uy = fugaz.vy / magnitud;
+        const xFinal = fugaz.x - ux * fugaz.largo;
+        const yFinal = fugaz.y - uy * fugaz.largo;
+
+        const gradiente = ctx.createLinearGradient(fugaz.x, fugaz.y, xFinal, yFinal);
+        gradiente.addColorStop(0, `rgba(225, 242, 255, ${alfa * 0.95})`);
+        gradiente.addColorStop(0.18, `rgba(100, 175, 255, ${alfa * 0.48})`);
+        gradiente.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+        ctx.strokeStyle = gradiente;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(fugaz.x, fugaz.y);
+        ctx.lineTo(xFinal, yFinal);
+        ctx.stroke();
+
+        return fugaz.vida < fugaz.duracion;
+      });
+    }
+
+    function animar(tiempo) {
+      const delta = Math.min(tiempo - estado.ultimoTiempo || 16, 40);
+      estado.ultimoTiempo = tiempo;
+      dibujarFondo();
+      dibujarNebulosas(tiempo);
+      actualizarYdibujarPolvo(delta);
+      actualizarYdibujarEstrellas(tiempo, delta);
+      actualizarYdibujarFugaces(tiempo, delta);
+      requestAnimationFrame(animar);
+    }
+
+
+    const textoTitulo = "Cálculo Modular I";
+    const tituloIndice = document.getElementById("tituloIndice");
+
+    [...textoTitulo].forEach((caracter, indice) => {
+      const span = document.createElement("span");
+
+      if (caracter === " ") {
+        span.className = "letra espacio";
+        span.innerHTML = "&nbsp;";
+      } else {
+        span.className = "letra";
+        span.textContent = caracter;
+      }
+
+      span.style.setProperty(
+        "--retraso",
+        `${0.55 + indice * 0.09}s`
+      );
+
+      tituloIndice.appendChild(span);
+    });
+
+
+    const textoListo = "¿Listo?";
+    const contenedorListo = document.getElementById("textoListo");
+
+    [...textoListo].forEach((caracter, indice) => {
+      const span = document.createElement("span");
+
+      if (caracter === " ") {
+        span.className = "letra espacio";
+        span.innerHTML = "&nbsp;";
+      } else {
+        span.className = "letra";
+        span.textContent = caracter;
+      }
+
+      span.style.setProperty(
+        "--retraso",
+        `${4.55 + indice * 0.11}s`
+      );
+
+      contenedorListo.appendChild(span);
+    });
+
+    window.addEventListener("resize", ajustarCanvas);
+    ajustarCanvas();
+    estado.proximaFugaz = 12000;
+    requestAnimationFrame(animar);
+  </script>
+</body>
+</html>
